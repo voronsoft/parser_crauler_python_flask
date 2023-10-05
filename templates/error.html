@@ -1,0 +1,10 @@
+{% extends 'index.html' %}
+{% block title %}Страница ошибок{% endblock %}
+
+{% block content %}
+    <div class="alert alert-danger" role="alert">
+        <b>Описание ошибки:</b><br>
+        {{ error_message }}
+    </div>
+
+{% endblock content %}
