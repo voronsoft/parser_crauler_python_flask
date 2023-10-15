@@ -10,6 +10,7 @@ from urllib.parse import urlparse, unquote
 from models import SiteConfig  # импорт моделей представления таблиц
 
 
+# Функция генерации имени для файла по названию ссылки страницы
 def generate_download_filename(original_filename):
     """Функция генерации имени для файла по названию ссылки страницы - name_data.html(расширение зависит от типа заголовка Content-Type"""
 
@@ -54,6 +55,7 @@ def generate_download_filename(original_filename):
         return f'unknown_error-{decoded_filename}'
 
 
+# Функция получения данных страницы
 def get_webpage_data(url):
     """Функция получения данных страницы"""
     user_agent = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'}
@@ -74,6 +76,7 @@ def get_webpage_data(url):
         return None
 
 
+# функция для создания файла в папке сайта
 def create_file_in_website_folder(url=None):
     """функция для создания файла в папке сайта"""
     # Получаем путь к папке сайта который подлежит парсингу
