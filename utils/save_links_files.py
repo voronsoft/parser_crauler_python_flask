@@ -5,9 +5,13 @@
 """
 import os  # для работы с файловой системой
 import requests
+import threading
 import mimetypes
 from urllib.parse import urlparse, unquote
 from models import SiteConfig  # импорт моделей представления таблиц
+
+# объект блокировки для потоков
+file_lock_thread = threading.Lock()
 
 
 # Функция генерации имени для файла по названию ссылки страницы
@@ -79,24 +83,22 @@ def get_webpage_data(url):
 # функция для создания файла в папке сайта
 def create_file_in_website_folder(url=None):
     """функция для создания файла в папке сайта"""
-    # Получаем путь к папке сайта который подлежит парсингу
+    # Получаем путь к папке сайта
     folder_path = SiteConfig.query.first()  # запрос к бд
     # формируем путь для записи
     path_download = os.path.join(folder_path.upload_path_folder, generate_download_filename(url))
 
     if os.path.exists(folder_path.upload_path_folder):  # если папка сайта существует по пути из бд
         # проверка что такого файла в директории нет
-        print(f'Проверка есть ли в директории сайта такой файл - {os.path.exists(path_download)}')
-        # print(path_download)
+        print(f'Проверка есть ли такой файл - {os.path.exists(path_download)}')
         if not os.path.exists(path_download):
-            print('Файла с таким именем нет, идет создание файла --->>>')
-            with open(path_download, 'w', encoding='utf-8') as file:  # создаем файл
-                data = get_webpage_data(url)  # Получаем данные страницы из адреса
-                file.write(data)  # запись данных
-                print(f'Файл создан: {generate_download_filename(url)}')
+            with file_lock_thread:
+                with open(path_download, 'w', encoding='utf-8') as file:  # создаем файл
+                    data = get_webpage_data(url)  # Получаем данные страницы из адреса
+                    file.write(data)  # запись данных
+                    print(f'--->>> создание файла {generate_download_filename(url)}')
             return True
         else:
-            print(f'Файл с именем уже есть в папке сайта\nЗапись не будет произведена\n'
-                  f'{path_download}')
+            print(f' -запись отменяется {path_download}')
     else:
         return False

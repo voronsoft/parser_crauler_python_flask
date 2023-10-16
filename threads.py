@@ -110,7 +110,7 @@ def index():
 def start():
     global thread_1_run
     print('========')
-    print(f'сост потока1 {stop_event_thread_1}')
+    print(f'сост потока1 stop_event_thread_1 {stop_event_thread_1}')
     print(f'stop_event_thread_1 = {stop_event_thread_1.is_set()}')
     print('========')
     data = SiteConfig.query.first()  # получаем объект записи о сайте из бд
@@ -128,14 +128,23 @@ def start():
         all_urls = [f'<b>{ind + 1} -</b> {link.links_from_page}' for ind, link in enumerate(ParsedData.query.all())]
         return render_template('start.html', title='Старт процесса парсинга222', data=data, all_urls=all_urls)
 
-    # если поток unset/False и данные сайта есть в таблице бд
+    # если stop_event_thread_1.is_set() == unset/False и данные сайта есть в таблице бд
+    # запускаем процесс для обхода ссылок на сайте
     elif not stop_event_thread_1.is_set() and data is not None:
-        thread_1 = threading.Thread(target=my_background_task, args=(data, stop_event_thread_1, pause_resume_event_thread_1))
-        print(f'333333 состояние потока до старта======={thread_1.is_alive()}')
-        thread_1.start()  # запускаем поток
-        thread_1_run = True  # Переключаем флаг работы потока thread_1_run (True/ONN)
+        # Функция для обработки ссылок в каждом потоке
+        def process_links_2():
+            # Блокируем доступ другому потоку пока идет обращение к функции
+            with file_creation_lock:
+                my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1)
+
+        # создаем 4 потока
+        for i in range(0, 4):
+            thread = threading.Thread(target=process_links_2)
+            thread.start()
+            thread_1_run = True  # Переключаем флаг работы потока thread_1_run (True/ONN)
+            print('запуск ОСНОВНОГО потока: ', i + 1)
         all_urls = False
-        print(f'333333 состояние потока после старта======={thread_1.is_alive()}')
+
         return render_template('start.html', title='Старт процесса парсинга333', data=data, all_urls=all_urls)
 
     return 'Сработала заглушка'
@@ -157,12 +166,10 @@ def links_save_files():
     # Функция для обработки ссылок в каждом потоке
     def process_links(lst):
         for link in lst:
-            # Блокируем доступ перед вызовом create_file_in_website_folder
-            # дабы избежать
-            with file_creation_lock:
-                # создаем контекст приложения для доступа к данным функции - create_file_in_website_folder
-                with app.app_context():
-                    create_file_in_website_folder(link)
+            # создаем контекст приложения для доступа к данным функции - create_file_in_website_folder
+            with app.app_context():
+                # функция записи файлов в папку сайта
+                create_file_in_website_folder(link)
 
     # если пришел запрос POST начинаем основной цикл создания файлов в папке сайта
     if request.method == 'POST':
@@ -171,6 +178,7 @@ def links_save_files():
         #  получаем из БД все ссылки по которым будем создавать файлы в папке
         links = [link.links_from_page for link in ParsedData.query.all()]
 
+        # TODO количество потоков установлено 4 для записи файлов
         # Разбиваем список ссылок на 4 части (по числу потоков) используем библиотеку numpy
         split_links_from_thread = [arr.tolist() for arr in np.array_split(links, 4)]
 
@@ -178,7 +186,7 @@ def links_save_files():
         for i in range(0, 4):
             thread = threading.Thread(target=process_links, args=(split_links_from_thread[i],))
             thread.start()
-            print('запуск потока: ', i + 1)
+            print(f'запуск потока: {id(thread)}', i + 1)
 
     return render_template('save_links_files.html', title='Запись ссылок в файлы', data_site=data_site, urls_count=urls_count)
 
@@ -247,7 +255,7 @@ def pause_thread_1():
     global thread_1_run  # доступ на изменение переменной из функции
 
     pause_resume_event_thread_1.set()  # останавливаем поток
-    thread_1_run = False  # работа потока OFF
+    thread_1_run = True  # работа потока - если True сработает условие в строке 123
     return redirect(url_for('start'))
 
 
@@ -257,29 +265,29 @@ def resume_thread_1():
     global thread_1_run  # доступ на изменение переменной из функции
 
     pause_resume_event_thread_1.clear()  # запускаем поток
-    thread_1_run = True  # работа потока ONN
+    print('НАЖАЛ КНОПКУ ПРОДОЛЖИТЬ', pause_resume_event_thread_1.is_set())
+    thread_1_run = False  # работа потока - если False сработает условие в строке 133
     return redirect(url_for('start'))
 
 
 # Маршрут счетчик найденных ссылок
 @app.route('/sse')
 def sse():
-    # Функция для получения количества ссылок
+    # Функция для получения количества обработаных ссылок
     def get_link_count():
         try:
-            with open('links.txt', 'r') as file:
+            with open('links.txt', 'r', encoding='utf-8') as file:
                 lines = file.readlines()
                 return len(lines)
-        except FileNotFoundError:
-            # return 0
-            return 'Файл links.txt(с ссылками для подсчета количества) в корне сайта не найден !!!'
+        except Exception as e:
+            raise Exception(f'Ошибка в маршруте /sse - функция: get_link_count\n ERROR - {e}')
 
     def generate():
         while True:
             link_count = get_link_count()  # Получаем текущее количество ссылок
+            print(f'SSE-1 RUN {link_count}')
             yield f"data: {link_count}\n\n"
-            sleep(1)  # Ждем 2 секунду перед отправкой следующего обновления
-            print('SSE-1 работает >>>>>')
+            sleep(2)  # Ждем 2 секунды
 
     return Response(generate(), content_type='text/event-stream')
 
@@ -290,18 +298,19 @@ def sse_files_count():
     # получаем путь папки сайта из БД
     path_folder_site = SiteConfig.query.first().upload_path_folder
     website_folder = os.path.join(path_folder_site)
-    print(f'path_folder_site: {path_folder_site}')
-    print(f'website_folder = {os.path.join(path_folder_site)}')
-    print()
 
     def generate():
-        while True:
-            # получаем количество файлов в папке сайта
-            file_count = len([f for f in os.listdir(website_folder) if os.path.isfile(os.path.join(website_folder, f))])
-            sleep(1)  # Ждем 1 секунду перед следующей проверкой
-            # Отправляем количество файлов клиенту
-            yield f"data: {file_count}\n\n"
-            print(f'SSE-2 работает >>>>> отправляет data {file_count}')
+        if os.path.exists(website_folder):
+            while True:
+                if os.path.exists(website_folder):
+                    # получаем количество файлов в папке сайта
+                    file_count = len([f for f in os.listdir(website_folder) if os.path.isfile(os.path.join(website_folder, f))])
+                    print(f'SSE-2 RUN {file_count}')
+                    yield f"data: {file_count}\n\n"  # Отправляем количество файлов клиенту
+                    sleep(2)  # Ждем 2 секунды
+
+                else:
+                    break
 
     return Response(generate(), content_type='text/event-stream')
 

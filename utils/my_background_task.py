@@ -1,11 +1,14 @@
-import os
 import requests
+import threading
 from time import sleep
 from pprint import pprint
 from random import randint
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin, unquote
 from utils.clear_files_state_and_links import clear_files_state_and_links
+
+# объект блокировки для потоков
+file_lock_thread = threading.Lock()
 
 
 def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1):
@@ -15,10 +18,10 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1):
     Ссылки будут записаны в файл links.txt
     :param data: - данные сайта для начала парсинга
     :param stop_event_thread_1: - флаг для остановки работы с последующим стиранием данных о сайте
-    :param pause_resume_event_thread_1: - флаг для пауза/продолжить работы
+    :param pause_resume_event_thread_1: - флаг для пауза/продолжить работу
     """
 
-    # Задаем начальный URL сайта, который вы хотите просканировать
+    # Задаем начальный URL сайта, который хотим просканировать
     start_url = data.link_url_start
     # Задаем user-agent
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'}
@@ -77,10 +80,25 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1):
             print(f"Ошибка при запросе страницы {url}. Статус код: {response.status_code}")
             return []
 
+    # TODO если в файл добавится ссылка ведущая не на страницу html то
+    # возникает проблема с продолжением парсинга с места где произошла остановка
+    # При записи ссылки нужно следить что-бы это была не :
+    # мертвая ссылка \ .css \ .js \ не файл
     # Функция для сохранения состояния выполнения
     def save_state(url):
-        with open('state.txt', 'w', encoding='utf-8') as file:
-            file.write(unquote(url))
+        # Получаем заголовки страницы
+        response = requests.head(url)
+        # Проверяем что это не файлы
+        if not any(url.endswith(_) for _ in ['.css', '.js']):
+            if response.status_code == 200:
+                try:
+                    with file_lock_thread:
+                        with open('state.txt', 'w', encoding='utf-8') as file:
+                            file.write(unquote(url))
+
+                except Exception as e:
+                    # Выбрасываем исключение с информативным сообщением
+                    print(f'Ошибка при записи в файл state.py (вызвана в функции my_background_task.py/save_state(): {str(e)}')
 
     # Функция для загрузки состояния выполнения
     def load_state():
@@ -92,39 +110,16 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1):
 
     # Функция для удаления дубликатов из файла
     def remove_duplicates_from_file():
-        with open('links.txt', 'r', encoding='utf-8') as file:
-            lines = file.readlines()
-
-            unique_url = set(lines)
-
-        with open('links.txt', 'w', encoding='utf-8') as file:
-            file.writelines(unique_url)
-
-    # Функция проверки что ссылка уже записана в файл links.txt
-    def verify_links_file(link):
-        try:
-            # Открываем файл на чтение
+        with file_lock_thread:
             with open('links.txt', 'r', encoding='utf-8') as file:
-                # Читаем содержимое файла и декодируем
-                file_contents = unquote(file.read())
+                lines = file.readlines()
 
-            # Декодируем также строку link
-            decoded_link = unquote(link)
+                unique_url = set(lines)
 
-            # Добавляем символ новой строки в конец декодированной строки link
-            decoded_link_with_newline = decoded_link + '\n'
+            with open('links.txt', 'w', encoding='utf-8') as file:
+                file.writelines(unique_url)
 
-            # Проверяем наличие декодированной строки link в содержимом файла
-            if decoded_link_with_newline in file_contents:
-                return True  # Строка найдена в файле
-            else:
-                return False  # Строка не найдена в файле
-
-        except FileNotFoundError:
-            # Вызываем исключение и завершаем выполнение кода
-            raise FileNotFoundError('Файл "links.txt" не существует.')
-
-    # Функция для проверки наличия строки в файле
+    # Функция для проверки наличия строки (ссылки) в файле
     def is_link_in_file(link):
         try:
             with open('links.txt', 'r', encoding='utf-8') as file:
@@ -137,54 +132,53 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1):
 
     # Функция для сохранения ссылок в файл
     def save_links_to_file(links):
-        with open('links.txt', 'a', encoding='utf-8') as file:  # открываем в режиме дозаписи в конец файла
-            if links:  # если список не пустой
-                for link in links:
-                    if link not in unique_links:  # если ссылка не находится в множестве (уникальных ссылок)
-                        if not is_link_in_file(unquote(link)):  # Проверяем, не существует ли такой ссылки в файле
-                            file.write(unquote(link) + '\n')  # записываем ссылку в файл(links.txt) просканированных страниц
-                            print(f'URL saved in links.txt: {link}')
-                        else:
-                            print(f'!!!!! ИГНОР: Ссылка уже есть в файле: {link}')
-                    elif link in unique_links:
-                        print(f'!!!!! ИГНОР: Ссылка уже была записана в уникальные: {link}')
+        with file_lock_thread:
+            with open('links.txt', 'a', encoding='utf-8') as file:  # открываем в режиме дозаписи в конец файла
+                if links:  # если список не пустой
+                    for link in links:
+                        if link not in unique_links:  # если ссылка не находится в множестве (уникальных ссылок)
+                            if not is_link_in_file(unquote(link)):  # Проверяем, не существует ли такой ссылки в файле
+                                file.write(unquote(link) + '\n')  # записываем ссылку в файл(links.txt) просканированных страниц
+                                print(f'URL saved in links.txt: {link}')
+                            else:
+                                print(f'!!!!! ИГНОР: Ссылка уже есть в файле: {link}')
+                        elif link in unique_links:
+                            print(f'!!!!! ИГНОР: Ссылка уже была записана в уникальные: {link}')
 
         remove_duplicates_from_file()
 
+    # ################# основная функция модуля ##############
     # Функция для обхода всех страниц сайта (используем метод цикла while)
     def crawl_site(url):
         urls_to_process = [url]  # Используем список для хранения URL для обработки
 
-        # while работает пока:
-        # stop_event_thread_1 = False/unset
-        # data содержит данные (не None)
-        # urls_to_process - не None
-        # pause_resume_event_thread_1 = False/unset
         while not stop_event_thread_1.is_set() and data is not None and urls_to_process and not pause_resume_event_thread_1.is_set():
             url = urls_to_process.pop(0)  # Берем первый URL из списка
 
             if url in unique_links:
-                print(f'!!!!! ИГНОР ссылка была ранее обработана: {url}')
+                print(f'!!!!! ИГНОР ссылка уже обработана: {url}')
                 continue
 
             try:
                 print(f'__________Обработка: {unquote(url)}')
                 links = get_links_on_page(url)  # Получаем все ссылки со страницы
-                save_links_to_file(links)  # Запись ссылок в файл
+                save_links_to_file(links)  # Запись ссылок в файл / проверка есть ли такая ссылка в файле links.txt
                 unique_links.add(url)  # Добавляем в уникальные
                 print(f'__________ Cсылка {url} добавлена в - unique_links_________')
                 print(f'__________ Ссылки на странице {url} сохранены в links.txt')
                 print()
                 processed_urls.add(url)  # Добавляем текущий URL в множество обработанных
-                save_state(url)  # Сохраняем состояние выполнения
+
+                save_state(url)  # Сохраняем состояние выполнения задачи
 
                 for link in links:
                     if link not in processed_urls and link not in urls_to_process:
                         urls_to_process.append(link)
 
-            except requests.exceptions.RequestException as e:
-                print(f'Произошла ошибка в файле my_background_task.py\n'
-                      f'при запросе к сайту {url}: {e}')
+            except Exception as e:
+                # Выбрасываем исключение с информативным сообщением
+                raise Exception(f'Произошла ошибка в файле my_background_task.py/функция-crawl_site()\n'
+                                f'при запросе к сайту по URL: {url}: {str(e)}')
 
         # если произошла остановка потока до записи данных в текстовые файлы
         # контрольно очистим файлы state.txt и links.txt
@@ -194,6 +188,8 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1):
             print('==========================================')
             print('============= ПАУЗА ПАРСИНГА =============')
             print('==========================================')
+
+    # ################# END - основная функция модуля ##############
 
     # ================================================================================
     previous_url = load_state()  # Загружаем состояние выполнения, если оно существует
