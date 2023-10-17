@@ -90,15 +90,15 @@ def create_file_in_website_folder(url=None):
 
     if os.path.exists(folder_path.upload_path_folder):  # если папка сайта существует по пути из бд
         # проверка что такого файла в директории нет
-        print(f'Проверка есть ли такой файл - {os.path.exists(path_download)}')
-        if not os.path.exists(path_download):
-            with file_lock_thread:
-                with open(path_download, 'w', encoding='utf-8') as file:  # создаем файл
-                    data = get_webpage_data(url)  # Получаем данные страницы из адреса
+        print(f'Проверка есть ли такой файл - {os.path.exists(path_download)}', end=" ")
+        if not os.path.exists(path_download):  # если такого файла нет то
+            data = get_webpage_data(url)  # Получаем данные страницы из адреса - создаем файл
+            with file_lock_thread:  # блокируем доступ другому потоку
+                with open(path_download, 'w', encoding='utf-8') as file:
                     file.write(data)  # запись данных
                     print(f'--->>> создание файла {generate_download_filename(url)}')
             return True
         else:
-            print(f' -запись отменяется {path_download}')
+            print(f'-запись отменяется {path_download}')
     else:
         return False
