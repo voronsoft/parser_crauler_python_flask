@@ -153,6 +153,8 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
     # ################# основная функция модуля ##############
     # Функция для обхода всех страниц сайта (используем метод цикла while)
     # Функция для сохранения ссылок в файл links.txt
+
+    # Функция для сохранения ссылок в файл links.txt
     def save_links_to_file(links):
         if links:  # если список не пустой
             for link in links:  # перебор списка
@@ -169,10 +171,11 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
 
         remove_duplicates_from_file()
 
+    # основная функция обработки ссылок при поиске ссылок на сайте
     def crawl_site(url):
         urls_to_process = [url]  # Используем список для хранения URL для обработки
 
-        while not stop_event_thread_1.is_set() and data is not None and urls_to_process and not pause_resume_event_thread_1.is_set():
+        while (not stop_event_thread_1.is_set()) and (data is not None) and urls_to_process and (not pause_resume_event_thread_1.is_set()):
             url = urls_to_process.pop(0)  # Берем первый URL из списка
 
             if url in unique_links:
@@ -200,10 +203,12 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
                 raise Exception(f'Произошла ошибка в файле my_background_task.py/функция-crawl_site()\n'
                                 f'при запросе к сайту по URL: {url}: {str(e)}')
 
-        # если произошла остановка потока до записи данных в текстовые файлы
+        # если событие stop_event_thread_1 установлено в set/True
         # контрольно очистим файлы state.txt и links.txt
-        if stop_event_thread_1.is_set():
+        if stop_event_thread_1.is_set():  #
             clear_files_state_and_links()
+
+        # если событие pause_resume_event_thread_1 в состоянии True цикл while не отрабатывает обход ссылок
         if pause_resume_event_thread_1.is_set():
             print(f'{thread_name} ==========================================')
             print(f'{thread_name} ============= ПАУЗА ПАРСИНГА =============')
