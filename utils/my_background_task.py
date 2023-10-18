@@ -3,11 +3,16 @@ import threading
 from time import sleep
 from random import randint
 from bs4 import BeautifulSoup
+from datetime import datetime
 from urllib.parse import urlparse, urljoin, unquote
 from utils.clear_files_state_and_links import clear_files_state_and_links
 
 # объект блокировки для потоков
 file_lock_thread = threading.Lock()
+# Множество для хранения уникальных ссылок что бы исключать повтор при парсинге
+unique_links = set()
+# Множество для хранения уже обработанных URL-адресов
+processed_urls = set()
 
 
 def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, thread_name):
@@ -26,11 +31,11 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
     # Задаем user-agent
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'}
 
-    # Множество для хранения уже обработанных URL-адресов
-    processed_urls = set()
+    # # Множество для хранения уже обработанных URL-адресов
+    # processed_urls = set()
 
-    # Множество для хранения уникальных ссылок что бы исключать повтор при парсинге
-    unique_links = set()
+    # # Множество для хранения уникальных ссылок что бы исключать повтор при парсинге
+    # unique_links = set()
 
     # Задаем домен сайта (извлекаем его из начального URL)
     parsed_start_url = urlparse(start_url)
@@ -163,7 +168,7 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
                         with file_lock_thread:
                             with open('links.txt', 'a', encoding='utf-8') as file:  # открываем в режиме дозаписи в конец файла
                                 file.write(unquote(link) + '\n')  # записываем ссылку в файл(links.txt) просканированых страниц
-                                print(f'{thread_name} URL saved in links.txt: {link}')
+                                print(f'{thread_name} URL added links.txt {link}')
                     else:
                         print(f'{thread_name} !!!!! ИГНОР: Ссылка уже есть в файле: {link}')
                 elif link in unique_links:
@@ -176,7 +181,8 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
         urls_to_process = [url]  # Используем список для хранения URL для обработки
 
         while (not stop_event_thread_1.is_set()) and (data is not None) and urls_to_process and (not pause_resume_event_thread_1.is_set()):
-            url = urls_to_process.pop(0)  # Берем первый URL из списка
+            with file_lock_thread:
+                url = urls_to_process.pop(0)  # Берем первый URL из списка
 
             if url in unique_links:
                 print(f'{thread_name} !!!!! ИГНОР ссылка уже обработана: {url}')
@@ -186,17 +192,20 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
                 print(f'{thread_name} __________Обработка: {unquote(url)}')
                 links = get_links_on_page(url)  # Получаем все ссылки со страницы
                 save_links_to_file(links)  # Запись ссылок в файл / проверка есть ли такая ссылка в файле links.txt
-                unique_links.add(url)  # Добавляем в уникальные
-                print(f'{thread_name} __________ Cсылка {url} добавлена в - unique_links_________')
+                with file_lock_thread:
+                    unique_links.add(url)  # Добавляем в уникальные
+                    print(f'{thread_name} ___ Cсылка {url} добавлена в - unique_links__{datetime.now().time()}')
                 print(f'{thread_name} __________ Ссылки на странице {url} сохранены в links.txt')
                 print()
-                processed_urls.add(url)  # Добавляем текущий URL в множество обработанных
+                with file_lock_thread:
+                    processed_urls.add(url)  # Добавляем текущий URL в множество обработанных
 
                 save_state(url)  # Сохраняем состояние выполнения задачи
 
                 for link in links:
                     if link not in processed_urls and link not in urls_to_process:
-                        urls_to_process.append(link)
+                        with file_lock_thread:
+                            urls_to_process.append(link)
 
             except Exception as e:
                 # Выбрасываем исключение с информативным сообщением
