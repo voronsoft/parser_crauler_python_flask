@@ -238,8 +238,9 @@ def clear_site_and_data():
         flash(f'Произошла ошибка при очистке данных в БД: {str(e)}')
         return render_template('error.html', error_message=str(e))
 
-    # после очистки данных возвращаем событию состояние unset/False
-    stop_event_thread_1.clear()  # состояние unset/False
+    # после очистки данных возвращаем событиям состояние unset/False
+    stop_event_thread_1.clear()  # сброс, состояние unset/False
+    pause_resume_event_thread_1.clear()  # сброс, состояние unset/False
     # изменяем флаг работы потока thread_run
     global thread_run
     thread_run = False

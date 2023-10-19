@@ -86,74 +86,38 @@
     {% endif %}
 
     <script>
-    let eventSource; // Глобальная переменная для хранения объекта EventSource
-    function checkAndReload() {
-        const linkCountElement = document.getElementById('linkCount');
-        const currentValue = linkCountElement.textContent;
+        let eventSource; // Глобальная переменная для хранения объекта EventSource
+        function checkAndReload() {
+            const linkCountElement = document.getElementById('linkCount');
+            const currentValue = linkCountElement.textContent;
 
-        setTimeout(function () {
-            const newValue = linkCountElement.textContent;
+            setTimeout(function () {
+                const newValue = linkCountElement.textContent;
 
-            // Если значение не изменилось 30 секунд, закрываем соединение SSE и переходим на другую страницу
-            if (currentValue === newValue) {
-                if (eventSource) {
-                    eventSource.close();
+                // Если значение не изменилось 30 секунд, закрываем соединение SSE и переходим на другую страницу
+                if (currentValue === newValue) {
+                    if (eventSource) {
+                        eventSource.close();
+                    }
+                    window.location.href = '/save-links-files'; // Переход на другую страницу
                 }
-                window.location.href = '/save-links-files'; // Переход на другую страницу
-            }
-        }, 30000); // Время ожидания миллисекунд для перезагрузки страницы
-    }
-
-    // Вызываем функцию для первой проверки
-    checkAndReload();
-
-    // Код для обновления значения найденных ссылок в блоке <div id="linkCount"></div> при получении событий
-    eventSource = new EventSource('/sse');
-
-    eventSource.onmessage = function (event) {
-        const linkCountElement = document.getElementById('linkCount');
-        if (linkCountElement) {
-            linkCountElement.textContent = event.data;
-            // При получении события также запускаем проверку
-            checkAndReload();
+            }, 30000); // Время ожидания миллисекунд для перезагрузки страницы
         }
-    };
-</script>
 
+        // Вызываем функцию для первой проверки
+        checkAndReload();
 
-{#    <script>#}
-{#        let eventSource; // Глобальная переменная для хранения объекта EventSource#}
-{#        function checkAndReload() {#}
-{#            const linkCountElement = document.getElementById('linkCount');#}
-{#            const currentValue = linkCountElement.textContent;#}
-{##}
-{#            setTimeout(function () {#}
-{#                const newValue = linkCountElement.textContent;#}
-{##}
-{#                // Если значение не изменилось 30 сек перезагружаем страницу#}
-{#                if (currentValue === newValue) {#}
-{#                    if (eventSource) {#}
-{#                        eventSource.close();#}
-{#                    }#}
-{#                    location.reload();#}
-{#                }#}
-{#            }, 10000); // Время ожидания миллисекунд для перезагрузки страницы#}
-{#        }#}
-{##}
-{#        // Вызываем функцию для первой проверки#}
-{#        checkAndReload();#}
-{##}
-{#        // Код для обновления значения найденных ссылок в блоке <div id="linkCount"></div> при получении событий#}
-{#        eventSource = new EventSource('/sse');#}
-{##}
-{#        eventSource.onmessage = function (event) {#}
-{#            const linkCountElement = document.getElementById('linkCount');#}
-{#            if (linkCountElement) {#}
-{#                linkCountElement.textContent = event.data;#}
-{#                // При получении события также запускаем проверку#}
-{#                checkAndReload();#}
-{#            }#}
-{#        };#}
-{#    </script>#}
+        // Код для обновления значения найденных ссылок в блоке <div id="linkCount"></div> при получении событий
+        eventSource = new EventSource('/sse');
+
+        eventSource.onmessage = function (event) {
+            const linkCountElement = document.getElementById('linkCount');
+            if (linkCountElement) {
+                linkCountElement.textContent = event.data;
+                // При получении события также запускаем проверку
+                checkAndReload();
+            }
+        };
+    </script>
 
 {% endblock content %}
