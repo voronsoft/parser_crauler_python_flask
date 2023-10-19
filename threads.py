@@ -1,14 +1,14 @@
-import os  # для работы с файловой системой
+import os
 import subprocess
 import platform
-
 import requests
 import threading
+import numpy as np
 from time import sleep
-from shutil import rmtree  # импортировано для возможности удаления папок из системы если они не пустые
+from shutil import rmtree
 from urllib.parse import unquote
-from forms_wtf import UrlLinkForm  # классы представления для работы с БД
-from models import db, ParsedData, SiteConfig  # импорт моделей представления таблиц
+from forms_wtf import UrlLinkForm
+from models import db, ParsedData, SiteConfig
 from utils.my_background_task import my_background_task
 from utils.save_links_to_database import save_links_to_database
 from utils.save_links_files import create_file_in_website_folder
@@ -28,12 +28,12 @@ app.config.from_object('instance.app_config')
 #  выполняет инициализацию объекта SQLAlchemy для вашего Flask-приложения
 db.init_app(app)
 
-# Создаем события для управления потоком1, изначально находится в состоянии "не установлено" (unset/False)
+# Создаем события для управления потоком, изначально находится в состоянии "не установлено" (unset/False)
 stop_event_thread_1 = threading.Event()  # служит для полного стирания данных о сайте
 pause_resume_event_thread_1 = threading.Event()  # служит для опций пауза/продолжить
 
-# Флаг работает/не работает поток thread_1_run (True/ONN or False/OFF)
-thread_1_run = False  # OFF
+# Флаг работает/не работает поток thread_run (True/ONN or False/OFF)
+thread_run = False  # OFF
 
 
 # Маршрут главная страница
@@ -61,11 +61,14 @@ def index():
 
         # проверяем ответ сервера, существуют ли ссылки:
         try:
-            requests.get(index_site_link)  # отправляем запрос серверу
-            requests.get(link_url_start)  # отправляем запрос серверу
-        except Exception as err:
-            # Обработка всех видов ошибок
-            return render_template('error.html', error_message=str(err))
+            response1 = requests.get(index_site_link)  # отправляем запрос серверу для корня сайта
+            response2 = requests.get(link_url_start)  # отправляем запрос серверу для стартовой страницы
+            if response1.status_code != 200 or response2.status_code != 200:
+                flash('Страницы домена сайта или стартовой страницы не существуют или вернули ошибку')
+        except Exception as e:
+            # Обработка ошибок
+            flash(f'Ошибка при запросе к страницам домен сайта или стартовой странице.')
+            return render_template('error.html', error_message=str(e))
         # --------- END блок корректности введённых ссылок на главной странице
 
         # --------- Блок логика записи в базу данных полученных из формы на главной странице после этапа проверки
@@ -81,8 +84,8 @@ def index():
             return render_template('error.html', error_message=str(e))
         # --------- END блок логика записи в бд
 
-        # блок создания и записи в бд папки сайта в uploads
         answ = create_site_folder_and_update_db(app, db, index_site_link, link_url_start)
+
         if answ is True:
             return redirect(url_for('start'))
         else:
@@ -105,10 +108,9 @@ def index():
 # маршрут начала парсинга
 @app.route('/start')
 def start():
-    global thread_1_run
+    global thread_run
     print('========')
-    print(f'сост потока1 {stop_event_thread_1}')
-    print(f'stop_event_thread_1 = {stop_event_thread_1.is_set()}')
+    print(f'сост потока stop_event_thread_1 {stop_event_thread_1} - {stop_event_thread_1.is_set()}')
     print('========')
     data = SiteConfig.query.first()  # получаем объект записи о сайте из бд
 
@@ -116,28 +118,29 @@ def start():
     if data is None:  # если объект пустой (то есть записи в бд нет)
         return render_template('start.html', title='Старт процесса парсинга111', data=data)
 
-    # если поток выполняется пробуем вывести спарсенные ссылки из бд
-    elif thread_1_run:
-        print('================ ВХОД =================')
-        print('=======================================')
-        # записываем в бд ссылки из файла links.txt
-        save_links_to_database()
-        all_urls = [f'<b>{ind + 1} -</b> {link.links_from_page}' for ind, link in enumerate(ParsedData.query.all())]
-        return render_template('start.html', title='Старт процесса парсинга222', data=data, all_urls=all_urls)
-
-    # если поток unset/False и данные сайта есть в таблице бд
     elif not stop_event_thread_1.is_set() and data is not None:
-        thread_1 = threading.Thread(target=my_background_task, args=(data, stop_event_thread_1, pause_resume_event_thread_1))
-        print(f'333333 состояние потока до старта======={thread_1.is_alive()}')
-        thread_1.start()  # запускаем поток
-        thread_1_run = True  # Переключаем флаг работы потока thread_1_run (True/ONN)
+        # Функция для обработки ссылок в каждом потоке
+        def process_links_2():
+            thread_name = threading.current_thread().name  # Получаем название текущего потока и передаем его в основную функцию
+            # в функции my_background_task предусмотрена блокировка доступа для параллельных потоков
+            my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, thread_name)
+
+        # TODO установка количества потоков для сбора ссылок
+        # создаем 4 потока
+        for i in range(0, 4):
+            thread = threading.Thread(target=process_links_2)
+            thread.start()
+            thread_run = True  # Переключаем флаг работы потока в состояние (True/ONN)
         all_urls = False
-        print(f'333333 состояние потока после старта======={thread_1.is_alive()}')
+
         return render_template('start.html', title='Старт процесса парсинга333', data=data, all_urls=all_urls)
 
-    return 'Сработала заглушка'
+    return 'Заглушка'
 
 
+# маршрут создания файла скаченной страницы в папке сайта из списка найденных ссылок
+# используется метод создания 4 потоков с разделением списка ссылок на 4 части
+# (исходя из количества созданных потоков делим список)
 @app.route('/save-links-files', methods=['GET', 'POST'])
 def links_save_files():
     data_site = SiteConfig.query.first()  # получаем объект записи о сайте из бд
@@ -149,17 +152,30 @@ def links_save_files():
         urls_count = False  # 'В БД нет записей (ссылок).'
         data_site = False  # 'Нет данных'
 
+    # Функция для обработки ссылок в каждом потоке
+    def process_links(lst):
+        for link in lst:
+            # создаем контекст приложения для доступа к данным из функции - create_file_in_website_folder
+            with app.app_context():
+                # функция записи файлов в папку сайта
+                create_file_in_website_folder(link)
+
     # если пришел запрос POST начинаем основной цикл создания файлов в папке сайта
     if request.method == 'POST':
-        print('со страницы пришёл запрос POST')  # если была нажата кнопка Начать запись-->
+        print('Пришёл POST')  # если была нажата кнопка: Начать запись-->
+
+        #  получаем из БД все ссылки по которым будем создавать файлы в папке
         links = [link.links_from_page for link in ParsedData.query.all()]
 
-        for ind, link in enumerate(links):
-            create_file_in_website_folder(link)
-            print(f'{ind + 1} обработана: {link}')
-            print('___________________________________________________________')
-            print()
-            sleep(2)
+        # TODO количество потоков для записи файлов, установлено 4
+        # Разбиваем список ссылок на 4 части (по числу потоков) используем библиотеку numpy
+        split_links_from_thread = [arr.tolist() for arr in np.array_split(links, 4)]
+
+        # создаем 4 потока
+        for i in range(0, 4):
+            thread = threading.Thread(target=process_links, args=(split_links_from_thread[i],))
+            thread.start()
+            print(f'запуск потока: {id(thread)}', i + 1)
 
     return render_template('save_links_files.html', title='Запись ссылок в файлы', data_site=data_site, urls_count=urls_count)
 
@@ -167,6 +183,7 @@ def links_save_files():
 # маршрут документация
 @app.route('/documentation')
 def documentation():
+    # TODO создать документацию
     ...
     return render_template('documentation.html', title='Документация')
 
@@ -175,12 +192,12 @@ def documentation():
 @app.route('/clear_site_and_data', methods=['POST'])
 def clear_site_and_data():
     """Очистка базы данных и удаление папки с данными из папки uploads"""
-    # задаем событию для потока1 значение  "не установлено" (unset/False)
+    # задаем событию для потока значение  "не установлено" (unset/False)
     stop_event_thread_1.set()  # Переходит в состояние "установлено" (unset/.is_set()==False).
     print('=================== Очистка данных =====================')
     print('Поток в начальном состоянии - "не установлено" (unset/False)')
 
-    # Удаление папки сайта с данными
+    # Получаем путь к папке для удаления
     folder_path = SiteConfig.query.first()
 
     # удаление папки из системы по пути folder_path
@@ -191,7 +208,7 @@ def clear_site_and_data():
 
         except OSError as e:
             print(f'Ошибка при удалении папки сайта: {e}')
-            flash(f'Ошибка при удалении папки сайта: {str(e)}', 'error')
+            return render_template('error.html', error_message=str(e))
     else:
         print(f'Папка сайта успешно удалена')
 
@@ -207,116 +224,120 @@ def clear_site_and_data():
         flash('Данные успешно очищены')
     except Exception as e:
         db.session.rollback()
-        flash(f'Произошла ошибка при очистке данных в БД: {str(e)}', 'error')
+        flash(f'Произошла ошибка при очистке данных в БД: {str(e)}')
+        return render_template('error.html', error_message=str(e))
 
-    # после очистки данных возвращаем событию состояние unset/False
-    stop_event_thread_1.clear()  # состояние unset/False
-    # изменяем флаг работы потока thread_1_run
-    global thread_1_run
-    thread_1_run = False
+    # после очистки данных возвращаем событиям состояние unset/False
+    stop_event_thread_1.clear()  # сброс, состояние unset/False
+    pause_resume_event_thread_1.clear()  # сброс, состояние unset/False
+    # изменяем флаг работы потока thread_run
+    global thread_run
+    thread_run = False
 
-    print(f'stop_event_thread_1: {stop_event_thread_1}')
-    print(f'stop_event_thread_1 = {stop_event_thread_1.is_set()}')
-    print('=================== Очистка данных =====================')
-    return redirect(url_for('index'))  # Перенаправление на домашнюю страницу
+    print(f'Состояние потока stop_event_thread_1: {stop_event_thread_1} - {stop_event_thread_1.is_set()}')
+    print('=================== END Очистка данных =====================')
+    return redirect(url_for('index'))
 
 
-# TODO продумать вопрос об остановке процесса по необходимости
-# маршрут для "ПАУЗА" задачи в потоке1
+# маршрут для "ПАУЗА" задачи в потоке по сбору ссылок
 @app.route('/pause-thread-1', methods=['POST'])
 def pause_thread_1():
-    global thread_1_run  # доступ на изменение переменной из функции
+    global thread_run  # доступ на изменение переменной из функции
 
-    pause_resume_event_thread_1.set()  # останавливаем поток
-    thread_1_run = False  # работа потока OFF
+    pause_resume_event_thread_1.set()  # останавливаем поток устанавливая событие в set
+    thread_run = True  # работа потока - если True сработает условие в строке 122
     return redirect(url_for('start'))
 
 
-# маршрут для "ПРОДОЛЖИТЬ" задачу в потоке1
+# маршрут для "ПРОДОЛЖИТЬ" задачу в потоке
 @app.route('/resume-thread-1', methods=['POST'])
 def resume_thread_1():
-    global thread_1_run  # доступ на изменение переменной из функции
+    global thread_run  # доступ на изменение переменной из функции
 
     pause_resume_event_thread_1.clear()  # запускаем поток
-    thread_1_run = True  # работа потока ONN
+    print('НАЖАЛ КНОПКУ ПРОДОЛЖИТЬ', pause_resume_event_thread_1.is_set())
+    thread_run = False  # работа потока - если False сработает условие в строке 132
     return redirect(url_for('start'))
 
 
-# Маршрут счетчик найденных ссылок
+# Маршрут счетчик найденных ссылок SSE оповещение
 @app.route('/sse')
 def sse():
-    # Функция для получения количества ссылок
+    # Функция для получения количества обработанных ссылок
     def get_link_count():
         try:
-            with open('links.txt', 'r') as file:
+            with open('links.txt', 'r', encoding='utf-8') as file:
                 lines = file.readlines()
                 return len(lines)
-        except FileNotFoundError:
-            # return 0
-            return 'Файл links.txt(с ссылками для подсчета количества) в корне сайта не найден !!!'
+        except Exception as e:
+            raise Exception(f'Ошибка в маршруте /sse - функция: get_link_count\n ERROR - {e}')
 
     def generate():
         while True:
             link_count = get_link_count()  # Получаем текущее количество ссылок
+            print(f'SSE-1 RUN {link_count}')
             yield f"data: {link_count}\n\n"
-            sleep(1)  # Ждем 2 секунду перед отправкой следующего обновления
-            print('SSE-1 работает >>>>>')
+            sleep(2)  # Ждем 2 секунды
 
     return Response(generate(), content_type='text/event-stream')
 
 
-# Маршрут счетчик количества файлов сохраненных в папке сайта
+# Маршрут счетчик количества файлов сохраненных в папке сайта для SSE оповещение
 @app.route('/sse-files-count-folder-site')
 def sse_files_count():
     # получаем путь папки сайта из БД
     path_folder_site = SiteConfig.query.first().upload_path_folder
     website_folder = os.path.join(path_folder_site)
-    print(f'path_folder_site: {path_folder_site}')
-    print(f'website_folder = {os.path.join(path_folder_site)}')
-    print()
 
     def generate():
-        while True:
-            # получаем количество файлов в папке сайта
-            file_count = len([f for f in os.listdir(website_folder) if os.path.isfile(os.path.join(website_folder, f))])
-            sleep(1)  # Ждем 1 секунду перед следующей проверкой
-            # Отправляем количество файлов клиенту
-            yield f"data: {file_count}\n\n"
-            print(f'SSE-2 работает >>>>> отправляет data {file_count}')
+        if os.path.exists(website_folder):
+            while True:
+                if os.path.exists(website_folder):
+                    # получаем количество файлов в папке сайта
+                    file_count = len([f for f in os.listdir(website_folder) if os.path.isfile(os.path.join(website_folder, f))])
+                    print(f'SSE-2 RUN {file_count}')
+                    yield f"data: {file_count}\n\n"  # Отправляем количество файлов клиенту
+                    sleep(2)  # Ждем 2 секунды
+                else:
+                    break
 
     return Response(generate(), content_type='text/event-stream')
 
 
 # Маршрут открытия файлового менеджера в зависимости от ОС (Linux or Windows)
+# реакция на нажатие кнопки  Просмотр файлов
 @app.route('/open_file_manager', methods=['POST'])
 def open_file_manager():
     if request.method == 'POST':
         os_type = platform.system()
+        # os LINUX
         if os_type == 'Linux':
-            # Определите путь к папке сайта
+            # Путь к папке сайта
             path_folder_site = SiteConfig.query.first().upload_path_folder
             path_folder_site = os.path.join(path_folder_site)
             # Команда для открытия файлового менеджера в Linux
             subprocess.Popen(['xdg-open', path_folder_site])
+        # os WINDOWS
         elif os_type == 'Windows':
-            # Определите путь к папке сайта
+            # Путь к папке сайта
             path_folder_site = SiteConfig.query.first().upload_path_folder
             path_folder_site = os.path.join(path_folder_site)
             # Команда для открытия файлового менеджера в Windows
             subprocess.Popen(['explorer', path_folder_site])
         else:
-            return "Неподдерживаемая операционная система."
+            flash(f'Возникла ошибка при открытии файлового менеджера вашей системы')
+            return render_template('error.html', error_message=str('Неподдерживаемая операционная система.'))
 
     return redirect(url_for('documentation'))
 
 
 # # -------------------------------------------------
-# # запуск приложения с сервером - Werkzeug (тестовый местный)
+# # запуск приложения с сервером - Werkzeug (тестовый)
 # if __name__ == '__main__':
 #     # app.run()
 #     app.run(host='0.0.0.0')
 
-# запуск приложения с сервером - Waitress (для использования SSE)
+# запуск приложения с сервером - Waitress (для использования SSE оповещений)
 if __name__ == '__main__':
     from waitress import serve
 

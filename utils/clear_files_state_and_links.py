@@ -1,5 +1,9 @@
 # Функция очистки текстовых файлов state.txt и links.txt
 import os
+import threading
+
+# объект блокировки для потоков
+file_lock_thread = threading.Lock()
 
 
 def clear_files_state_and_links():
@@ -12,14 +16,16 @@ def clear_files_state_and_links():
 
         # Проверяем существование файла state.txt и удаляем его содержимое, если файл существует
         if os.path.exists(state_file_path):
-            with open(state_file_path, 'w', encoding='utf-8') as file:
-                file.truncate(0)  # Удаляем содержимое файла
-            print('Файл state.txt очищен.')
+            with file_lock_thread:
+                with open(state_file_path, 'w', encoding='utf-8') as file:
+                    file.truncate(0)  # Удаляем содержимое файла
+                print('Файл state.txt очищен.')
 
         # Проверяем существование файла links.txt и удаляем его содержимое, если файл существует
         if os.path.exists(links_file_path):
-            with open(links_file_path, 'w', encoding='utf-8') as file:
-                file.truncate(0)  # Удаляем содержимое файла
+            with file_lock_thread:
+                with open(links_file_path, 'w', encoding='utf-8') as file:
+                    file.truncate(0)  # Удаляем содержимое файла
             print('Файл links.txt очищен.')
     except Exception as e:
         print(f'Произошла ошибка при очистке данных в файлах state.txt и  links.txt:\n'
