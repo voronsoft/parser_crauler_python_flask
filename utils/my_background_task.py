@@ -4,6 +4,7 @@ from time import sleep
 from random import randint
 from bs4 import BeautifulSoup
 from datetime import datetime
+from fake_useragent import UserAgent
 from urllib.parse import urlparse, urljoin, unquote
 from utils.clear_files_state_and_links import clear_files_state_and_links
 
@@ -28,8 +29,13 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
 
     # Задаем начальный URL сайта, который хотим просканировать
     start_url = data.link_url_start
-    # Задаем user-agent
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'}
+
+    # TODO Задаем user-agent рандомно
+    #   Get a random browser user-agent string
+    #   print(ua.random)
+    ua = UserAgent()
+    # headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'}
+    headers = {'User-Agent': str(ua.random)}
 
     # Задаем домен сайта (извлекаем его из начального URL)
     parsed_start_url = urlparse(start_url)

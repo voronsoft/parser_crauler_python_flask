@@ -118,14 +118,14 @@ def start():
     if data is None:  # если объект пустой (то есть записи в бд нет)
         return render_template('start.html', title='Старт процесса парсинга111', data=data)
 
-    # если поток выполняется пробуем вывести спарсенные ссылки из бд
-    elif thread_run:
-        print('================ ВХОД =================')
-        print('=======================================')
-        # записываем в бд ссылки из файла links.txt
-        save_links_to_database()
-        all_urls = [f'<b>{ind + 1} -</b> {link.links_from_page}' for ind, link in enumerate(ParsedData.query.all())]
-        return render_template('start.html', title='Старт процесса парсинга222', data=data, all_urls=all_urls)
+    # # если поток выполняется пробуем вывести спарсенные ссылки из бд
+    # elif thread_run:
+    #     print('================ ВХОД =================')
+    #     print('=======================================')
+    #     # записываем в бд ссылки из файла links.txt
+    #     save_links_to_database()
+    #     all_urls = [f'<b>{ind + 1} -</b> {link.links_from_page}' for ind, link in enumerate(ParsedData.query.all())]
+    #     return render_template('start.html', title='Старт процесса парсинга222', data=data, all_urls=all_urls)
 
     # если stop_event_thread_1.is_set() == unset/False и данные сайта есть в таблице бд
     # запускаем процесс для обхода ссылок на сайте

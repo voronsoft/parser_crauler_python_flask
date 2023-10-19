@@ -8,6 +8,9 @@ import requests
 import threading
 import mimetypes
 from urllib.parse import urlparse, unquote
+
+from fake_useragent import UserAgent
+
 from models import SiteConfig  # импорт моделей представления таблиц
 
 # объект блокировки для потоков
@@ -62,7 +65,12 @@ def generate_download_filename(original_filename):
 # Функция получения данных страницы
 def get_webpage_data(url):
     """Функция получения данных страницы"""
-    user_agent = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'}
+    # TODO Задаем user-agent рандомно
+    #   Get a random browser user-agent string
+    #   print(ua.random)
+    ua = UserAgent()
+    user_agent = {'User-Agent': str(ua.random)}
+
     try:
         # Отправляем GET-запрос по указанной ссылке
         response = requests.get(url, user_agent)

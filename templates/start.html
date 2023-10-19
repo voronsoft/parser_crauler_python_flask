@@ -8,50 +8,50 @@
             Данные сайта для начала процесса парсинга не введены !!!<br>
             Вернитесь на главную страницу для заполнения данных !!!
         </div>
-    {% elif all_urls %}
-        <div class="card my-2">
-            <h5 class="card-header">
-                <p class="nav-link active">Адрес домена (корень): {{ data.index_site_link }}</p>
-                <p class="nav-link active">URL страницы начала парсинга: {{ data.link_url_start }}</p>
-                <p class="nav-link active">Адрес паки сайта в uploads: {{ data.upload_path_folder }}</p>
-            </h5>
-            <div class="card-body " style="height: 300px; overflow: auto;">
-                <p><b>Обнаруженные ссылки:</b></p>
-                {% for link in all_urls %}
-                    <p>{{ link | safe }}</p>
-                {% endfor %}
-                <div id="data-container"></div>
-            </div>
-            <div class="card-footer text-body-secondary">
-                <div class="alert alert-success" role="alert">
-                    <div class="row">
-                        <div class="col-auto mb-0">
-                            <div class="d-flex justify-content-center">
-                                <div class="spinner-grow text-danger" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-auto">
-                            <h5>Количество найденных ссылок: <span id="linkCount"></span></h5>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-auto m-1">
-                        <form method="post" action="/pause-thread-1">
-                            <button type="submit" class="btn btn-secondary">Пауза</button>
-                        </form>
-                    </div>
-                    <div class="col-auto m-1">
-                        <form method="post" action="/resume-thread-1">
-                            <button type="submit" class="btn btn-secondary">Продолжить</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+{#    {% elif all_urls %}#}
+{#        <div class="card my-2">#}
+{#            <h5 class="card-header">#}
+{#                <p class="nav-link active">Адрес домена (корень): {{ data.index_site_link }}</p>#}
+{#                <p class="nav-link active">URL страницы начала парсинга: {{ data.link_url_start }}</p>#}
+{#                <p class="nav-link active">Адрес паки сайта в uploads: {{ data.upload_path_folder }}</p>#}
+{#            </h5>#}
+{#            <div class="card-body " style="height: 300px; overflow: auto;">#}
+{#                <p><b>Обнаруженные ссылки:</b></p>#}
+{#                {% for link in all_urls %}#}
+{#                    <p>{{ link | safe }}</p>#}
+{#                {% endfor %}#}
+{#                <div id="data-container"></div>#}
+{#            </div>#}
+{#            <div class="card-footer text-body-secondary">#}
+{#                <div class="alert alert-success" role="alert">#}
+{#                    <div class="row">#}
+{#                        <div class="col-auto mb-0">#}
+{#                            <div class="d-flex justify-content-center">#}
+{#                                <div class="spinner-grow text-danger" role="status">#}
+{#                                    <span class="visually-hidden">Loading...</span>#}
+{#                                </div>#}
+{#                            </div>#}
+{#                        </div>#}
+{##}
+{#                        <div class="col-auto">#}
+{#                            <h5>Количество найденных ссылок: <span id="linkCount"></span></h5>#}
+{#                        </div>#}
+{#                    </div>#}
+{#                </div>#}
+{#                <div class="row">#}
+{#                    <div class="col-auto m-1">#}
+{#                        <form method="post" action="/pause-thread-1">#}
+{#                            <button type="submit" class="btn btn-secondary">Пауза</button>#}
+{#                        </form>#}
+{#                    </div>#}
+{#                    <div class="col-auto m-1">#}
+{#                        <form method="post" action="/resume-thread-1">#}
+{#                            <button type="submit" class="btn btn-secondary">Продолжить</button>#}
+{#                        </form>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </div>#}
+{#        </div>#}
     {% elif all_urls == false %}
         <div class="alert alert-success" role="alert">
             Идёт сбор данных. <br>
@@ -80,9 +80,9 @@
         </div>
 
     {% else %}
-        Всё пошло по бороде братан ((((<br>
+        Всё пошло по бороде ((((<br>
         Ни одно из условий не прошло ))))<br>
-        ссылок в бд нет<br>
+        ЗАГЛУШКА<br>
     {% endif %}
 
     <script>
