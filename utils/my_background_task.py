@@ -34,7 +34,6 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
     #   Get a random browser user-agent string
     #   print(ua.random)
     ua = UserAgent()
-    # headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'}
     headers = {'User-Agent': str(ua.random)}
 
     # Задаем домен сайта (извлекаем его из начального URL)
