@@ -87,10 +87,6 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
             print(f"Ошибка при запросе страницы {url}. Статус код: {response.status_code}")
             return []
 
-    # TODO если в файл добавится ссылка ведущая не на страницу html то:
-    #  возникает проблема с продолжением парсинга с места где произошла остановка
-    #  При записи ссылки нужно следить что-бы это была не :
-    #  мертвая ссылка \ .css \ .js \ не файл
     # Функция для сохранения состояния выполнения
     def save_state(url):
         # Получаем заголовки страницы
@@ -172,9 +168,6 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
                 print(f'{thread_name} __________Обработка: {unquote(url)}')
                 links = get_links_on_page(url)  # Получаем все ссылки со страницы
                 save_links_to_file(links)  # Запись ссылок в файл / проверка есть ли такая ссылка в файле links.txt
-                # TODO добавил проверку добавления ссылки в список уникальных
-                #  основываясь на использовании нескольких потоков,
-                #  но без повторного использования операции обработки одинаковых ссылок
                 with file_lock_thread:  # Блокируем доступ перед проверкой
                     if url not in unique_links:  # проверяем есть ли такая ссылка в - unique_links
                         unique_links.add(url)  # Добавляем в уникальные
