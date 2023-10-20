@@ -8,7 +8,7 @@ from fake_useragent import UserAgent
 from urllib.parse import urlparse, urljoin, unquote
 from utils.clear_files_state_and_links import clear_files_state_and_links
 
-# объект блокировки для потоков
+# Объект блокировки для потоков
 file_lock_thread = threading.Lock()
 # Множество для хранения уникальных ссылок что бы исключать повтор при парсинге
 unique_links = set()
@@ -21,12 +21,12 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
     Функция которая по начальной странице для парсинга пройдет по всем страницам сайта
     соберёт ссылки для следующего этапа записи данных с страниц
     Ссылки будут записаны в файл links.txt
-    :param data: - данные сайта для начала парсинга
+    :param data: - данные сайта с БД для начала парсинга
     :param stop_event_thread_1: - флаг для остановки работы с последующим стиранием данных о сайте
-    :param pause_resume_event_thread_1: - флаг для пауза/продолжить работу
+    :param pause_resume_event_thread_1: - флаг для пауза/продолжить работу потоков
     :param thread_name: - идентификатор потока
     """
-
+    global unique_links
     # Задаем начальный URL сайта, который хотим просканировать
     start_url = data.link_url_start
 
@@ -42,7 +42,7 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
 
     # Функция для фильтрации ссылок по домену (если начинается с другого домена или '#' значит исключить)
     def filters_by_domain(link):
-        # определяем ссылки якоря
+        # Определяем ссылки якоря
         if link[-1] == '#' or link[-2] == '#/':  # Исключаем ссылки, если в конце ссылки # или #/
             return False
         if urlparse(link).fragment:
@@ -55,8 +55,7 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
     def filters_by_type_links(url):
         extension = ['.jpeg', '.jpg', '.gif', '.png', '.pdf', '.bmp', '.webp', '.swg', '.mp4', '.avi', '.mp3',
                      '.movie', '.mov', '.wmv', 'wma', '.wav', '.tiff', '.tif', '.mp4', '.ico']
-        # если есть такое расширение вернуть False
-        return not any([True for ext in extension if url.endswith(ext)])
+        return not any([True for ext in extension if url.endswith(ext)])  # Если есть такое расширение вернуть False
 
     # Функция для получения всех ссылок на странице
     def get_links_on_page(url):
@@ -68,19 +67,19 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
             # Находим все ссылки на странице (всех видов)
             all_urls_href = [unquote(urljoin(domain, link.get('href'))) for link in soup.find_all(lambda tag: tag.has_attr('href'))]
             all_urls_src = [unquote(urljoin(domain, link.get('src'))) for link in soup.find_all(lambda tag: tag.has_attr('src'))]
-            all_urls = set(all_urls_href + all_urls_src)  # удаляем дубликаты
+            all_urls = set(all_urls_href + all_urls_src)  # Удаляем дубликаты
 
-            # удаляем адреса которые не начинаются с нашего домена а так же адреса содержащие якоря - '#'
+            # Удаляем адреса которые не начинаются с нашего домена а так же адреса содержащие якоря - '#'
             all_urls = [link for link in all_urls if filters_by_domain(link)]
-            # удаляем ссылки которые являются медиа
+            # Удаляем ссылки которые являются медиа
             all_urls = [link for link in all_urls if filters_by_type_links(link)]
 
-            # ----- блок отладки -----
+            # ----- Блок отладки -----
             if len(all_urls) >= 1:
                 print(f'{thread_name} Обнаруженные страницы: {len(all_urls)} шт.')
             elif len(all_urls) <= 0:
                 print(f'{thread_name} По этому адресу нет ссылок, скорее всего это файл CSS/JS')
-            # ----- END блок отладки -----
+            # ----- END Блок отладки -----
 
             return all_urls
         else:
@@ -135,32 +134,31 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
 
     # Функция для сохранения ссылок в файл links.txt
     def save_links_to_file(links):
-        if links:  # если список не пустой
-            for link in links:  # перебор списка
-                if link not in unique_links:  # если ссылка не находится в множестве (уникальных ссылок)
-                    with file_lock_thread:  # добавляем блокировку
+        if links:  # Если список не пустой
+            for link in links:  # Перебор списка
+                if link not in unique_links:  # Если ссылка не находится в множестве (уникальных ссылок)
+                    with file_lock_thread:  # Добавляем блокировку
                         if not is_link_in_file(unquote(link)):  # Проверяем, не существует ли такой ссылки в файле
-                            with open('links.txt', 'a', encoding='utf-8') as file:  # открываем в режиме дозаписи в конец файла
-                                file.write(unquote(link) + '\n')  # записываем ссылку в файл(links.txt) просканированых страниц
+                            with open('links.txt', 'a', encoding='utf-8') as file:  # Открываем в режиме дозаписи в конец файла
+                                file.write(unquote(link) + '\n')  # Записываем ссылку в файл(links.txt) просканированых страниц
                                 print(f'{thread_name} URL added to-> links.txt {link} ({datetime.now()})')
                         else:
                             print(f'{thread_name} !!!!! ИГНОР: Ссылка уже есть в файле: {link}')
                 elif link in unique_links:
                     print(f'{thread_name} !!!!! ИГНОР: Ссылка уже была записана в уникальные: {link}')
 
-        # удаляем дубликаты из файла
+        # Удаляем дубликаты из файла
         remove_duplicates_from_file()
 
-    # основная функция обработки ссылок при поиске ссылок на сайте
+    # Основная функция обработки ссылок при поиске ссылок на сайте
     def crawl_site(url):
-        global unique_links
         urls_to_process = [url]  # Используем список для хранения URL для обработки
 
         while (not stop_event_thread_1.is_set()) and (data is not None) and urls_to_process and (not pause_resume_event_thread_1.is_set()):
             with file_lock_thread:
                 url = urls_to_process.pop(0)  # Берем первый URL из списка
 
-            if url in unique_links:  # проверяем есть ли такая ссылка в - unique_links
+            if url in unique_links:  # Проверяем есть ли такая ссылка в - unique_links
                 print(f'{thread_name} !!!!! ИГНОР ссылка уже обработана: {url}')
                 continue
 
@@ -189,12 +187,12 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
                 raise Exception(f'Произошла ошибка в файле my_background_task.py/функция-crawl_site()\n'
                                 f'при запросе к сайту по URL: {url}: {str(e)}')
 
-        # если событие stop_event_thread_1 установлено в set/True
+        # Если событие stop_event_thread_1 установлено в set/True
         # контрольно очистим файлы state.txt и links.txt
         if stop_event_thread_1.is_set():  #
             clear_files_state_and_links()
 
-        # если событие pause_resume_event_thread_1 в состоянии True цикл while не отрабатывает обход ссылок
+        # Если событие pause_resume_event_thread_1 в состоянии True цикл while не отрабатывает обход ссылок
         if pause_resume_event_thread_1.is_set():
             # сбрасываем список уникальных ссылок
             # unique_links.clear()

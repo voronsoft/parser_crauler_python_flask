@@ -2,12 +2,13 @@
 import os
 import threading
 
-# объект блокировки для потоков
+# Объект блокировки для потоков
 file_lock_thread = threading.Lock()
 
 
+# Очистка файлов state.txt и links.txt
 def clear_files_state_and_links():
-    # Очистка файлов state.txt и links.txt
+    """Очистка файлов state.txt и links.txt"""
     try:
         # Путь к файлу state.txt
         state_file_path = 'state.txt'

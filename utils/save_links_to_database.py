@@ -1,6 +1,5 @@
 # Функция для сохранения данных из файла 'links.txt' в базу данных ParsedData
 from models import db, ParsedData
-from flask_sse import sse
 
 
 def save_links_to_database():

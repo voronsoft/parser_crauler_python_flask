@@ -84,51 +84,6 @@
             };
         </script>
 
-
-        {#        <script>#}
-        {#            let eventSource; // Глобальная переменная для хранения объекта EventSource#}
-        {##}
-        {#            // Функция для проверки и остановки SSE, а также вывода сообщения#}
-        {#            function checkAndStopSse() {#}
-        {#                const filesCountElement = document.getElementById('files_count');#}
-        {#                const currentValue = filesCountElement.textContent;#}
-        {##}
-        {#                setTimeout(function () {#}
-        {#                    const newValue = filesCountElement.textContent;#}
-        {##}
-        {#                    if (currentValue === newValue) {#}
-        {#                        // Если значение не изменилось, закрываем EventSource#}
-        {#                        if (eventSource) {#}
-        {#                            eventSource.close();#}
-        {#                            // Выводим сообщение о завершении обработки#}
-        {#                            // Создаем HTML-код кнопки#}
-        {#                            const buttonHTML = '<button class="btn btn-secondary" id="open_file" type="submit">Просмотр файлов-->></button>';#}
-        {##}
-        {#                            const endProcessElement = document.getElementById('open_file');#}
-        {#                            if (endProcessElement) {#}
-        {#                                endProcessElement.innerHTML = buttonHTML;#}
-        {#                            }#}
-        {#                        }#}
-        {#                    }#}
-        {#                }, 10000); // Время ожидания миллисекунд для разрыва соединения SSE#}
-        {#            }#}
-        {##}
-        {#            // Вызываем функцию для первой проверки#}
-        {#            checkAndStopSse();#}
-        {##}
-        {#            // Код для обновления значения количества файлов в блоке <span id="files_count"></span> при получении событий#}
-        {#            eventSource = new EventSource('/sse-files-count-folder-site');#}
-        {##}
-        {#            eventSource.onmessage = function (event) {#}
-        {#                const filesCountElement = document.getElementById('files_count');#}
-        {#                if (filesCountElement) {#}
-        {#                    filesCountElement.textContent = event.data;#}
-        {##}
-        {#                    // При получении события также запускаем проверку#}
-        {#                    checkAndStopSse();#}
-        {#                }#}
-        {#            };#}
-        {#        </script>#}
     {% else %}
         <div class="alert alert-danger" role="alert">
             Данные сайта для начала процесса парсинга не введены !!!<br>

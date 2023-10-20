@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/docsearch.css') }}">
     <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
 
-    <!-- Стиль кнопки светлая тема -темная тема-->
+    <!-- Стиль - светлая тема -темная тема-->
     <style>
         .bd-placeholder-img {
             font-size: 1.125rem;
@@ -91,7 +91,7 @@
             z-index: 1500;
         }
     </style>
-    <!-- END Стиль кнопки светлая тема -темная тема-->
+    <!-- END Стиль светлая тема -темная тема-->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar-fixed.css') }}">
 </head>
 
@@ -170,18 +170,17 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav me-auto mb-2 mb-md-0">
-                {#                <li class="nav-item">#}
-                {#                    <a class="nav-link" aria-current="page" href="{{ url_for('start') }}">Процесc</a>#}
-                {#                </li>#}
-
+                <li class="nav-item">
+                    <a class="nav-link" aria-current="page" href="{{ url_for('start') }}">Процесc</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" aria-current="page" href="{{ url_for('links_save_files') }}">Запись</a>
+                </li>
                 <form method="POST" action="{{ url_for('clear_site_and_data') }}">
                     <li class="nav-item">
                         <button id="clear_data_site" class="nav-link " aria-current="page" type="submit">Очистить</button>
                     </li>
                 </form>
-                <li class="nav-item">
-                    <a class="nav-link" aria-current="page" href="{{ url_for('links_save_files') }}">Запись</a>
-                </li>
                 <li class="nav-item">
                     <a class="nav-link " aria-current="page" href="{{ url_for('documentation') }}">Документация</a>
                 </li>
@@ -192,52 +191,52 @@
 </nav>
 
 <main class="container border py-2">
-    <!-- блок сообщений -->
+    <!-- Блок сообщений -->
     {% for msg in get_flashed_messages() %}
         <div class="alert alert-danger" role="alert">
             {{ msg|safe }}
         </div>
     {% endfor %}
-    <!-- END блок сообщений -->
+    <!-- END Блок сообщений -->
 
     {% block content %}
         {% if not data %}
-        <h3>Введите ссылку</h3>
-        <form method="POST" class="row g-3" id="myForm">
-            {{ url_parser.hidden_tag() }} {# Вставляем скрытое поле для CSRF-защиты #}
-            <div>
-                {{ url_parser.index_site_link.label(class="form-label mb-0 mt-2", **{'data-bs-toggle': 'tooltip', 'title': '!!! В конце адреса должен стоять- /'}) }}
-                {{ url_parser.index_site_link(class="form-control", placeholder="https://example.com/") }}
+            <h3>Введите ссылку</h3>
+            <form method="POST" class="row g-3" id="myForm">
+                {{ url_parser.hidden_tag() }} {# Вставляем скрытое поле для CSRF-защиты #}
+                <div>
+                    {{ url_parser.index_site_link.label(class="form-label mb-0 mt-2", **{'data-bs-toggle': 'tooltip', 'title': '!!! В конце адреса должен стоять- /'}) }}
+                    {{ url_parser.index_site_link(class="form-control", placeholder="https://example.com/") }}
 
-                {% if url_parser.index_site_link.errors %}
-                    <ul class="errors">
-                        {% for error in url_parser.index_site_link.errors %}
-                            <li>{{ error }}</li>
-                        {% endfor %}
-                    </ul>
-                {% endif %}
+                    {% if url_parser.index_site_link.errors %}
+                        <ul class="errors">
+                            {% for error in url_parser.index_site_link.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
 
-                {{ url_parser.link_url_start.label(class="form-label mb-0 mt-2", **{'data-bs-toggle': 'tooltip', 'title': 'Ссылка для парсинга не должна указывать на файл типа : .css .js'}) }}
-                {{ url_parser.link_url_start(class="form-control", placeholder="https://example.com/page2") }}
+                    {{ url_parser.link_url_start.label(class="form-label mb-0 mt-2", **{'data-bs-toggle': 'tooltip', 'title': 'Ссылка для парсинга не должна указывать на файл типа : .css .js'}) }}
+                    {{ url_parser.link_url_start(class="form-control", placeholder="https://example.com/page2") }}
 
-                {% if url_parser.link_url_start.errors %}
-                    <ul class="errors">
-                        {% for error in url_parser.link_url_start.errors %}
-                            <li>{{ error }}</li>
-                        {% endfor %}
-                    </ul>
-                {% endif %}
-            </div>
+                    {% if url_parser.link_url_start.errors %}
+                        <ul class="errors">
+                            {% for error in url_parser.link_url_start.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
 
-            <div class="d-flex align-items-center">
-                <button type="submit" class="btn btn-secondary me-3">
-                    <span role="status">Запустить...</span>
-                </button>
-            </div>
-        </form>
+                <div class="d-flex align-items-center">
+                    <button type="submit" class="btn btn-secondary me-3">
+                        <span role="status">Запустить...</span>
+                    </button>
+                </div>
+            </form>
         {% elif data %}
-        Поля скрыты для ввода, что бы ввести данные нужно очистить базу данных.<br>
-        Для очистки данных, нажмите в меню кнопку << Очистить >>
+            Поля скрыты для ввода, что бы ввести данные нужно очистить базу данных.<br>
+            Для очистки данных, нажмите в меню кнопку << Очистить >>
         {% endif %}
     {% endblock content %}
 </main>

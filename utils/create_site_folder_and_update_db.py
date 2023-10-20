@@ -3,11 +3,21 @@
 # создание папки сайта в uploads
 # сохранение в бд путь к папке
 import os
+
+from flask import render_template, flash
+
 from models import SiteConfig
 from urllib.parse import unquote
 
 
 def create_site_folder_and_update_db(app, db, index_site_link, link_url_start):
+    """
+    :param app: - объект приложение
+    :param db: - объект базы данных
+    :param index_site_link: - URL основного домена
+    :param link_url_start: - URL стартовой страницы
+    :return:
+    """
     # --------- Блок - если запись ссылок прошла успешно создаем имя и корневую папку для сайта в uploads
     # название папки такое же как домен (с заменой знаков)
 
@@ -34,7 +44,7 @@ def create_site_folder_and_update_db(app, db, index_site_link, link_url_start):
         if not os.path.exists(file_path):
             os.makedirs(file_path)  # создаем папку
             print(f'Папка создана проверьте директорию uploads\\{file_name}')
-            # в таблицу поле SiteConfig записываем путь к папке в поле upload_path_folder
+            # в таблицу SiteConfig записываем путь к папке в поле upload_path_folder
             data_file_path = SiteConfig.query.first()  # Получаем первую запись из таблицы
             if data_file_path:  # Если запись не пустая
                 data_file_path.upload_path_folder = file_path  # Устанавливаем значение поля upload_path_folder
@@ -49,12 +59,13 @@ def create_site_folder_and_update_db(app, db, index_site_link, link_url_start):
         print(f'Страница для парсинга: {unquote(link_url_start)}')
         print('_____________________________________')
         # --------- END Блок создание папки по названию запрошеного сайта с проверкой и записью в бд
-        # если все ок перенаправляем на страницу начала процесса парсинга
+        # Если все ок перенаправляем на страницу начала процесса парсинга
 
         return True
 
     except Exception as err:
         # Если произошла ошибка, откатываем изменения в базе данных
         db.session.rollback()
-        print(f'Произошла ошибка: {err}')
-        return str(err)
+        print(f'При создании главной папки возникли проблемы.: {err}')
+        flash('При создании главной папки возникли проблемы.')
+        return render_template('error.html', error_message=str(err))
