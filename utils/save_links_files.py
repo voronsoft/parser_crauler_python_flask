@@ -96,7 +96,7 @@ def create_file_in_website_folder(url=None):
 
     if os.path.exists(folder_path.upload_path_folder):  # Если папка сайта существует по пути из бд
         # Проверка что такого файла в директории нет
-        print(f'Проверка есть ли такой файл - {os.path.exists(path_download)}', end=" ")
+        print(f'Проверка есть ли такой файл - {os.path.exists(path_download)}')
         if not os.path.exists(path_download):  # Если такого файла нет то
             data = get_webpage_data(url)  # Получаем данные страницы из адреса - создаем файл
             with file_lock_thread:  # Блокируем доступ другому потоку

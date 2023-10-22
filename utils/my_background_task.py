@@ -112,12 +112,10 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
 
     # Функция для удаления дубликатов из файла
     def remove_duplicates_from_file():
-        with open('links.txt', 'r', encoding='utf-8') as file:
-            lines = file.readlines()
-
-            unique_url = set(lines)
-
         with file_lock_thread:
+            with open('links.txt', 'r', encoding='utf-8') as file:
+                lines = file.readlines()
+                unique_url = set(lines)
             with open('links.txt', 'w', encoding='utf-8') as file:
                 file.writelines(unique_url)
 
@@ -134,21 +132,22 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
 
     # Функция для сохранения ссылок в файл links.txt
     def save_links_to_file(links):
-        if links:  # Если список не пустой
-            for link in links:  # Перебор списка
-                if link not in unique_links:  # Если ссылка не находится в множестве (уникальных ссылок)
-                    with file_lock_thread:  # Добавляем блокировку
+        with file_lock_thread:  # Добавляем блокировку
+            if links:  # Если список не пустой
+                for link in links:  # Перебор списка
+                    if link not in unique_links:  # Если ссылка не находится в множестве (уникальных ссылок)
                         if not is_link_in_file(unquote(link)):  # Проверяем, не существует ли такой ссылки в файле
                             with open('links.txt', 'a', encoding='utf-8') as file:  # Открываем в режиме дозаписи в конец файла
                                 file.write(unquote(link) + '\n')  # Записываем ссылку в файл(links.txt) просканированых страниц
                                 print(f'{thread_name} URL added to-> links.txt {link} ({datetime.now()})')
-                        else:
-                            print(f'{thread_name} !!!!! ИГНОР: Ссылка уже есть в файле: {link}')
-                elif link in unique_links:
-                    print(f'{thread_name} !!!!! ИГНОР: Ссылка уже была записана в уникальные: {link}')
+                    #     else:
+                    #         print(f'{thread_name} !!!!! ИГНОР: Ссылка уже есть в файле: {link}')
+                    # elif link in unique_links:
+                    #     print(f'{thread_name} !!!!! ИГНОР: Ссылка уже была записана в уникальные: {link}')
 
         # Удаляем дубликаты из файла
         remove_duplicates_from_file()
+        print('После записи удаляем дубликаты с файла')
 
     # Основная функция обработки ссылок при поиске ссылок на сайте
     def crawl_site(url):
@@ -170,7 +169,7 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
                     if url not in unique_links:  # проверяем есть ли такая ссылка в - unique_links
                         unique_links.add(url)  # Добавляем в уникальные
                         print(f'{thread_name} - URL {url} added to-> unique_links ({datetime.now()})')
-                print(f'{thread_name} __________ Ссылки на странице {url} сохранены в links.txt')
+                # print(f'{thread_name} __________ Ссылки на странице {url} сохранены в links.txt')
                 print()
                 with file_lock_thread:
                     processed_urls.add(url)  # Добавляем текущий URL в множество обработанных

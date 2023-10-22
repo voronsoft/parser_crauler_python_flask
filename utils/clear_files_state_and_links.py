@@ -15,19 +15,19 @@ def clear_files_state_and_links():
         # Путь к файлу links.txt
         links_file_path = 'links.txt'
 
-        # Проверяем существование файла state.txt и удаляем его содержимое, если файл существует
-        if os.path.exists(state_file_path):
-            with file_lock_thread:
+        with file_lock_thread:
+            # Проверяем существование файла state.txt и удаляем его содержимое, если файл существует
+            if os.path.exists(state_file_path):
                 with open(state_file_path, 'w', encoding='utf-8') as file:
                     file.truncate(0)  # Удаляем содержимое файла
                 print('Файл state.txt очищен.')
 
-        # Проверяем существование файла links.txt и удаляем его содержимое, если файл существует
-        if os.path.exists(links_file_path):
-            with file_lock_thread:
+            # Проверяем существование файла links.txt и удаляем его содержимое, если файл существует
+            if os.path.exists(links_file_path):
                 with open(links_file_path, 'w', encoding='utf-8') as file:
                     file.truncate(0)  # Удаляем содержимое файла
-            print('Файл links.txt очищен.')
+                print('Файл links.txt очищен.')
+
     except Exception as e:
         print(f'Произошла ошибка при очистке данных в файлах state.txt и  links.txt:\n'
               f' {str(e)}', 'error')

@@ -1,5 +1,7 @@
 import os
 import platform
+from random import randint
+
 import requests
 import threading
 import subprocess
@@ -118,7 +120,9 @@ def start():
     if data is None:  # Если объект пустой (то есть записи в бд нет)
         return render_template('start.html', title='Старт процесса парсинга111', data=data)
 
-    elif not stop_event_thread_1.is_set() and data is not None:
+    elif not stop_event_thread_1.is_set() and data is not None and thread_run is not True:
+        print("Сработал запуск потоков")
+
         # Функция для обработки ссылок в каждом потоке
         def process_links_2():
             thread_name = threading.current_thread().name  # Получаем название текущего потока и передаем его в основную функцию
@@ -131,11 +135,10 @@ def start():
             thread = threading.Thread(target=process_links_2)
             thread.start()
             thread_run = True  # Переключаем флаг работы потока в состояние (True/ONN)
-        all_urls = False
 
-        return render_template('start.html', title='Старт процесса парсинга333', data=data, all_urls=all_urls)
+        return render_template('start.html', title='Старт процесса парсинга111', data=data, thread_run=thread_run)
 
-    return 'Заглушка'
+    return render_template('start.html', title='Старт процесса парсинга', data=data, thread_run=thread_run)
 
 
 # Маршрут создания файла скаченной страницы в папке сайта из списка найденных ссылок
@@ -155,10 +158,8 @@ def links_save_files():
     # Функция для обработки ссылок в каждом потоке
     def process_links(lst):
         for link in lst:
-            # Создаем контекст приложения для доступа к данным из функции - create_file_in_website_folder
-            with app.app_context():
-                # Функция записи файлов в папку сайта
-                create_file_in_website_folder(link)
+            with app.app_context():  # Создаем контекст приложения для доступа к данным из функции - create_file_in_website_folder
+                create_file_in_website_folder(link)  # Функция записи файлов в папку сайта
 
     # Если пришел запрос POST начинаем основной цикл создания файлов в папке сайта
     if request.method == 'POST':
@@ -171,11 +172,10 @@ def links_save_files():
         # Разбиваем список ссылок на 4 части (по числу потоков) используем библиотеку numpy
         split_links_from_thread = [arr.tolist() for arr in np.array_split(links, 4)]
 
-        # Создаем 4 потока
-        for i in range(0, 4):
+        # Создаем потоки согласно количеству частей списка
+        for i in range(len(split_links_from_thread)):
             thread = threading.Thread(target=process_links, args=(split_links_from_thread[i],))
             thread.start()
-            print(f'запуск потока: {id(thread)}', i + 1)
 
     return render_template('save_links_files.html', title='Запись ссылок в файлы', data_site=data_site, urls_count=urls_count)
 
