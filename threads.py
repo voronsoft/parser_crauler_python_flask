@@ -120,6 +120,7 @@ def start():
     if data is None:  # Если объект пустой (то есть записи в бд нет)
         return render_template('start.html', title='Старт процесса парсинга111', data=data)
 
+    # TODO - Основное условие запуска потоков !!!!!
     elif not stop_event_thread_1.is_set() and data is not None and thread_run is not True:
         print("Сработал запуск потоков")
 
