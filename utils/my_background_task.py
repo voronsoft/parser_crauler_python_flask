@@ -137,12 +137,12 @@ def my_background_task(url_temp, data, stop_event_thread_1, pause_resume_event_t
             return None  # Если файл не найден, возвращаем None
 
     # Функция для удаления дубликатов из файла
-    def remove_duplicates_from_file():
+    def remove_duplicates_from_file(file_name='links.txt'):
         with file_lock_thread:
-            with open('links.txt', 'r', encoding='utf-8') as file:
+            with open(file_name, 'r', encoding='utf-8') as file:
                 lines = file.readlines()
                 unique_url = set(lines)
-            with open('links.txt', 'w', encoding='utf-8') as file:
+            with open(file_name, 'w', encoding='utf-8') as file:
                 file.writelines(unique_url)
 
     # Функция для проверки наличия строки (ссылки) в файле
