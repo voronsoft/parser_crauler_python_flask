@@ -11,12 +11,13 @@
     {% elif thread_run %}
         <div class="alert alert-success" role="alert">
             Идёт сбор данных. <br>
-            Как только данные будут получены,страница перезагрузится,<br>
-            данные будут выведены на странице.<br>
+            Если счетчик найденных страниц не будет меняться в течении 60 секунд.<br>
+            Вы увидите кнопку - <b>Далее</b> Ожидайте пожалуйста !<br>
+
             <h5>Количество записанных ссылок: <span id="linkCount"></span></h5>
         </div>
 
-        <div class="d-flex justify-content-center">
+        <div class="d-flex justify-content-center mb-2">
             <div class="spinner-grow text-danger" role="status">
                 <span class="visually-hidden">Loading...</span>
             </div>
@@ -31,6 +32,11 @@
             <div class="col-auto">
                 <form method="post" action="/resume-thread-1">
                     <button type="submit" class="btn btn-secondary">Продолжить</button>
+                </form>
+            </div>
+            <div class="col-auto">
+                <form method="get" action="/save-links-files">
+                    <button id="nextButton" type="submit" class="btn btn-danger" style="display: none;">Далее</button>
                 </form>
             </div>
         </div>
@@ -55,6 +61,8 @@
                     if (eventSource) {
                         eventSource.close();
                     }
+                    const nextButton = document.getElementById('nextButton');
+                    nextButton.style.display = 'block';
                     //window.location.href = '/save-links-files'; // Переход на другую страницу
                 }
             }, 60000); // Время ожидания миллисекунд для перезагрузки страницы

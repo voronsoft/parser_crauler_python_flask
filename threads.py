@@ -1,7 +1,6 @@
 import os
 import platform
-from random import randint
-
+from pprint import pprint
 import requests
 import threading
 import subprocess
@@ -11,6 +10,7 @@ from shutil import rmtree
 from urllib.parse import unquote
 from forms_wtf import UrlLinkForm
 from models import db, ParsedData, SiteConfig
+from utils.first_url_threads import get_links_on_page
 from utils.my_background_task import my_background_task
 from utils.save_links_to_database import save_links_to_database
 from utils.save_links_files import create_file_in_website_folder
@@ -73,8 +73,12 @@ def index():
             return render_template('error.html', error_message=str(e))
         # --------- END блок корректности введённых ссылок на главной странице
 
+        # Получаем ссылки для старта потоков записав из в бд
+        links_start = get_links_on_page(link_url_start, index_site_link)
+        links_start = ' '.join(map(unquote, links_start))
+
         # --------- Блок логика записи в базу данных полученных из формы на главной странице после этапа проверки
-        data_url = SiteConfig(index_site_link=unquote(index_site_link), link_url_start=unquote(link_url_start))
+        data_url = SiteConfig(index_site_link=unquote(index_site_link), link_url_start=links_start)
         try:
             db.session.add(data_url)  # Добавляет объект data_url в текущую сессию базы данных
             db.session.commit()  # Записываем в базу данных данные из объекта
@@ -115,6 +119,7 @@ def start():
     print(f'сост потока stop_event_thread_1 {stop_event_thread_1} - {stop_event_thread_1.is_set()}')
     print('========')
     data = SiteConfig.query.first()  # Получаем объект записи о сайте из бд
+    url = iter(data.link_url_start.split())
 
     # Если data пустая (отправит на главную для ввода данных)
     if data is None:  # Если объект пустой (то есть записи в бд нет)
@@ -128,7 +133,7 @@ def start():
         def process_links_2():
             thread_name = threading.current_thread().name  # Получаем название текущего потока и передаем его в основную функцию
             # В функции my_background_task предусмотрена блокировка доступа для параллельных потоков
-            my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, thread_name)
+            my_background_task(next(url), data, stop_event_thread_1, pause_resume_event_thread_1, thread_name)
 
         # TODO установка количества потоков для сбора ссылок
         # Создаем 4 потока

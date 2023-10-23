@@ -16,11 +16,12 @@ unique_links = set()
 processed_urls = set()
 
 
-def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, thread_name):
+def my_background_task(url_temp, data, stop_event_thread_1, pause_resume_event_thread_1, thread_name):
     """
     Функция которая по начальной странице для парсинга пройдет по всем страницам сайта
     соберёт ссылки для следующего этапа записи данных с страниц
     Ссылки будут записаны в файл links.txt
+    :param url_temp - ссылка начала парсинга
     :param data: - данные сайта с БД для начала парсинга
     :param stop_event_thread_1: - флаг для остановки работы с последующим стиранием данных о сайте
     :param pause_resume_event_thread_1: - флаг для пауза/продолжить работу потоков
@@ -28,7 +29,7 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
     """
     global unique_links
     # Задаем начальный URL сайта, который хотим просканировать
-    start_url = data.link_url_start
+    start_url = url_temp
 
     # TODO Задаем user-agent рандомно
     #   Get a random browser user-agent string
@@ -36,9 +37,8 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
     ua = UserAgent()
     headers = {'User-Agent': str(ua.random)}
 
-    # Задаем домен сайта (извлекаем его из начального URL)
-    parsed_start_url = urlparse(start_url)
-    domain = parsed_start_url.scheme + '://' + parsed_start_url.netloc + '/'
+    # Задаем домен сайта (получаем из объекта - data)
+    domain = data.index_site_link
 
     # Функция для фильтрации ссылок по домену (если начинается с другого домена или '#' значит исключить)
     def filters_by_domain(link):
@@ -94,9 +94,22 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
         if not any(url.endswith(_) for _ in ['.css', '.js']):
             if response.status_code == 200:
                 try:
+                    # Захватываем блокировку файла, чтобы избежать конфликтов доступа
                     with file_lock_thread:
+                        with open('state.txt', 'r', encoding='utf-8') as file:
+                            # Читаем уже существующие строки в список
+                            lines = file.readlines()
+
+                        # Добавляем новую строку
+                        lines.append(unquote(url) + '\n')
+
+                        # Если число строк в списке превышает 4, удаляем первую строку
+                        if len(lines) > 4:
+                            lines.pop(0)
+
+                        # Перезаписываем файл
                         with open('state.txt', 'w', encoding='utf-8') as file:
-                            file.write(unquote(url))
+                            file.writelines(lines)
 
                 except Exception as e:
                     # Выбрасываем исключение с информативным сообщением
@@ -105,10 +118,23 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
     # Функция для загрузки состояния выполнения
     def load_state():
         try:
-            with open('state.txt', 'r', encoding='utf-8') as file:
-                return file.read().strip()
+            # Захватываем блокировку файла, чтобы избежать конфликтов доступа
+            with file_lock_thread:
+                # Открываем файл для чтения
+                with open('state.txt', 'r', encoding='utf-8') as file:
+                    # Считываем все строки из файла
+                    lines = file.readlines()
+                if lines:
+                    # Если есть хотя бы одна строка в файле
+                    first_line = lines[0]  # Извлекаем первую строку
+                    # Перезаписываем файл без первой строки
+                    with open('state.txt', 'w', encoding='utf-8') as file:
+                        file.writelines(lines[1:])
+                    return first_line.strip()  # Возвращаем первую строку без начальных и конечных пробелов
+                else:
+                    return None  # Если файла нет или он пуст, возвращаем None
         except FileNotFoundError:
-            return None
+            return None  # Если файл не найден, возвращаем None
 
     # Функция для удаления дубликатов из файла
     def remove_duplicates_from_file():
@@ -209,6 +235,7 @@ def my_background_task(data, stop_event_thread_1, pause_resume_event_thread_1, t
         crawl_site(previous_url)
     else:
         # Запускаем обход сайта с начального URL
+        print('Функция crawl_site запустилась с значением: ', start_url)
         crawl_site(start_url)
 
     # По завершению обхода, удаляем дубликаты из файла
