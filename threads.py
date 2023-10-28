@@ -119,14 +119,17 @@ def start():
     print(f'сост потока stop_event_thread_1 {stop_event_thread_1} - {stop_event_thread_1.is_set()}')
     print('========')
     data = SiteConfig.query.first()  # Получаем объект записи о сайте из бд
-    url = iter(data.link_url_start.split())
+    if data:
+        url = iter(data.link_url_start.split())
+    else:
+        url = None
 
     # Если data пустая (отправит на главную для ввода данных)
     if data is None:  # Если объект пустой (то есть записи в бд нет)
         return render_template('start.html', title='Старт процесса парсинга111', data=data)
 
     # TODO - Основное условие запуска потоков !!!!!
-    elif not stop_event_thread_1.is_set() and data is not None and thread_run is not True:
+    elif not stop_event_thread_1.is_set() and data is not None and thread_run is not True and url is not None:
         print("Сработал запуск потоков")
 
         # Функция для обработки ссылок в каждом потоке

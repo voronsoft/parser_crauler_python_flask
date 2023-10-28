@@ -56,14 +56,13 @@
             setTimeout(function () {
                 const newValue = linkCountElement.textContent;
 
-                // Если значение не изменилось 30 секунд, закрываем соединение SSE и переходим на другую страницу
+                // Если значение не изменилось 60 секунд, закрываем соединение SSE отображаем кнопку далее
                 if (currentValue === newValue) {
                     if (eventSource) {
                         eventSource.close();
                     }
                     const nextButton = document.getElementById('nextButton');
                     nextButton.style.display = 'block';
-                    //window.location.href = '/save-links-files'; // Переход на другую страницу
                 }
             }, 60000); // Время ожидания миллисекунд для перезагрузки страницы
         }
