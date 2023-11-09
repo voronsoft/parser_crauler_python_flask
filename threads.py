@@ -1,6 +1,5 @@
 import os
 import platform
-from pprint import pprint
 import requests
 import threading
 import subprocess
@@ -101,8 +100,7 @@ def index():
     elif SiteConfig.query.first() is not None:
         temp = SiteConfig.query.first()
         flash(f'Вы не можете ввести данные другого сайта если до этого вы вводили  данные:<br>'
-              f'<b>Главная страница сайта: {unquote(temp.index_site_link)}</b><br>'
-              f'<b>Страница для парсинга: {unquote(temp.link_url_start)}</b><br>'
+              f'<b>Домен: {unquote(temp.index_site_link)}</b><br>'
               f'Необходимо сначала очистить данные прошлого сайта<br>'
               f'Нажмите кнопку - ОЧИСТИТЬ в меню<br>'
               )
