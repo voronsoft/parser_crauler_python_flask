@@ -5,9 +5,8 @@ import secrets
 # Путь к корню проекта Flask относительно местоположения файла config.py
 ROOT_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
-# Указываем путь к базе данных
-SQLALCHEMY_DATABASE_URI = 'sqlite:///parser_database.db'
-
+# указываем путь к базе данных
+SQLALCHEMY_DATABASE_URI = 'mysql://root:root@localhost/db_parser'
 # Секретный ключ
 SECRET_KEY = secrets.token_hex(16)
 
