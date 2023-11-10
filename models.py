@@ -17,5 +17,5 @@ class SiteConfig(db.Model):
     """Класс данных сайта для сбора ссылок"""
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     index_site_link = db.Column(db.String(255), nullable=False)  # Главный домен
-    link_url_start = db.Column(db.String(255), nullable=False)  # Страница старта для парсинга
-    upload_path_folder = db.Column(db.String(255), nullable=False, default='')  # Путь к папке сайта с файлами
+    link_url_start = db.Column(db.Text, nullable=False)  # Страница старта для парсинга
+    upload_path_folder = db.Column(db.String(350), nullable=False, default='')  # Путь к папке сайта с файлами

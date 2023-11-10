@@ -162,6 +162,12 @@ def links_save_files():
         urls_count = False  # 'В БД нет записей (ссылок).'
         data_site = False  # 'Нет данных'
 
+    # если запись в бд в таблице SiteConfig существует и поле upload_path_folder имеет запись пути папки сайта
+    if data_site and data_site.upload_path_folder:
+        # проверяем есть ли такая папка в директории если нет то создаем что бы начать запись файлов в папку сайта
+        if not os.path.exists(data_site.upload_path_folder):
+            os.makedirs(data_site.upload_path_folder)
+
     # Функция для обработки ссылок в каждом потоке
     def process_links(lst):
         for link in lst:
@@ -190,7 +196,6 @@ def links_save_files():
 # Маршрут документация
 @app.route('/documentation')
 def documentation():
-    # TODO создать документацию
     ...
     return render_template('documentation.html', title='Документация')
 
@@ -208,14 +213,14 @@ def clear_site_and_data():
     folder_path = SiteConfig.query.first()
 
     # Удаление папки из системы по пути folder_path
-    if folder_path:
+    if folder_path and os.path.exists(folder_path.upload_path_folder):
         try:
             print(f'Папка {folder_path.upload_path_folder} сайта успешно удалена')
             rmtree(folder_path.upload_path_folder)  # Удаляем папку и ее содержимое
 
         except OSError as e:
             print(f'Ошибка при удалении папки сайта: {e}')
-            return render_template('error.html', error_message=str(e))
+            return render_template('error.html', error_message='Ошибка при удалении папки сайта: ' + str(e))
     else:
         print(f'Папка сайта успешно удалена')
 
@@ -232,7 +237,7 @@ def clear_site_and_data():
     except Exception as e:
         db.session.rollback()
         flash(f'Произошла ошибка при очистке данных в БД: {str(e)}')
-        return render_template('error.html', error_message=str(e))
+        return render_template('error.html', error_message='Произошла ошибка при очистке данных в БД: ' + str(e))
 
     # После очистки данных возвращаем событиям состояние unset/False
     stop_event_thread_1.clear()  # Сброс, состояние unset/False
@@ -313,17 +318,19 @@ def sse_files_count():
 
 # Маршрут открытия файлового менеджера в зависимости от ОС (Linux or Windows)
 # Реакция на нажатие кнопки - Просмотр файлов
-@app.route('/open_file_manager', methods=['POST'])
+@app.route('/open_file_manager', methods=['POST', 'GET'])
 def open_file_manager():
     if request.method == 'POST':
         os_type = platform.system()
         # os LINUX
         if os_type == 'Linux':
-            # Путь к папке сайта
-            path_folder_site = SiteConfig.query.first().upload_path_folder
-            path_folder_site = os.path.join(path_folder_site)
-            # Команда для открытия файлового менеджера в Linux
-            subprocess.Popen(['xdg-open', path_folder_site])
+            if SiteConfig.query.first():
+                path_folder_site = SiteConfig.query.first().upload_path_folder
+                path_folder_site = os.path.join(path_folder_site)
+                # Получение списка файлов в каталоге
+                file_list = os.listdir(path_folder_site)
+                return render_template('show-file.html', path_folder_site=path_folder_site, file_list=file_list)
+
         # os WINDOWS
         elif os_type == 'Windows':
             # Путь к папке сайта
@@ -331,6 +338,8 @@ def open_file_manager():
             path_folder_site = os.path.join(path_folder_site)
             # Команда для открытия файлового менеджера в Windows
             subprocess.Popen(['explorer', path_folder_site])
+            file_list = os.listdir(path_folder_site)
+            return render_template('show-file.html', path_folder_site=path_folder_site, file_list=file_list)
         else:
             flash(f'Возникла ошибка при открытии файлового менеджера вашей системы')
             return render_template('error.html', error_message=str('Неподдерживаемая операционная система.'))
@@ -339,13 +348,12 @@ def open_file_manager():
 
 
 # --------------- РАЗДЕЛ ВЫБОРА СЕРВЕРА ---------------------------
-# # запуск приложения с сервером - Werkzeug (тестовый)
-# if __name__ == '__main__':
-#     # app.run()
-#     app.run(host='0.0.0.0')
-
-# запуск приложения с сервером - Waitress (для использования SSE оповещений)
+# запуск приложения с сервером - Werkzeug (тестовый)
 if __name__ == '__main__':
-    from waitress import serve
+    app.run(host='0.0.0.0')
 
-    serve(app, host='0.0.0.0', port=5000, _quiet=True)
+# # запуск приложения с сервером - Waitress (для использования SSE оповещений)
+# if __name__ == '__main__':
+#     from waitress import serve
+#
+#     serve(app, host='0.0.0.0', port=5000, _quiet=True)

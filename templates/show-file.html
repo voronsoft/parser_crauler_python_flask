@@ -1,0 +1,16 @@
+{% extends 'index.html' %}
+{% block title %}Страница ошибок{% endblock %}
+
+{% block content %}
+    {% if path_folder_site %}
+        <h5>Файлы находятся по пути: {{ path_folder_site }}<br></h5>
+        <div class="container mt-4">
+            <div class="alert alert-secondary overflow-auto" role="alert" style="max-height: 300px;">
+                {% for file in file_list %}
+                    {{ file }}<br>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+{% endblock content %}
